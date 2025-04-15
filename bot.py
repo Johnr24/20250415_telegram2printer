@@ -232,9 +232,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Sorry, you are not authorized to use this bot.")
         return
 
-    await update.message.reply_html(
-        rf"Hi {user.mention_html()}! Send me an image to print on the label printer.",
-    )
+    welcome_message = rf"Hi {user.mention_html()}! Send me an image to print on the label printer."
+    if not CUPS_PRINTER_NAME:
+        warning_message = "\n\n<b>⚠️ Warning:</b> The printer is not configured. Printing is currently disabled. Please contact the administrator."
+        welcome_message += warning_message
+        logger.warning(f"Informing user {user.id} via /start that printer is not configured.")
+
+    await update.message.reply_html(welcome_message)
 
 async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles incoming photos, resizes them, and sends them to the printer."""
