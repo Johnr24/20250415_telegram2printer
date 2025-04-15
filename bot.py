@@ -209,7 +209,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>🤖 Bot Commands & Usage:</b>\n\n"
         "👋 /start - Display the welcome message.\n"
         "❓ /help - Show this help message.\n"
-        "⚙️ /setmaxcopies <number> - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
+        "⚙️ /setmaxcopies &lt;number&gt; - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
         "<b>🖨️ Printing:</b>\n"
         "Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a 4x6 label.\n\n"
         "<b>#️⃣ Multiple Copies:</b>\n"
