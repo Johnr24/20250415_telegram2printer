@@ -204,7 +204,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Sorry, you are not authorized to use this bot.")
         return
 
-    help_text = (
+    # Define base help text with a placeholder for MAX_COPIES
+    base_help_text = (
         "<b>🤖 Bot Commands & Usage:</b>\n\n"
         "👋 /start - Display the welcome message.\n"
         "❓ /help - Show this help message.\n"
@@ -216,9 +217,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• <code>x3</code> (prints 3 copies)\n"
         "• <code>copies=5</code> (prints 5 copies)\n"
         "Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
-        f"<b>⚠️ Max Copies Limit:</b>\nYou are configured for a maximum of <b>{MAX_COPIES}</b> copies per request."
+        "<b>⚠️ Max Copies Limit:</b>\nYou are configured for a maximum of <b>{}</b> copies per request."
     )
-    await update.message.reply_html(help_text)
+    # Format the string with the current MAX_COPIES value
+    formatted_help_text = base_help_text.format(MAX_COPIES)
+    await update.message.reply_html(formatted_help_text)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
