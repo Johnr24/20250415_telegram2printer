@@ -160,6 +160,42 @@ def parse_copies(caption):
 
 # --- Telegram Bot Handlers ---
 
+async def set_max_copies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Allows authorized users to set the maximum number of copies."""
+    user = update.effective_user
+    if ALLOWED_USER_IDS and user.id not in ALLOWED_USER_IDS:
+        logger.warning(f"Unauthorized /setmaxcopies attempt by user {user.id} ({user.username})")
+        await update.message.reply_text("Sorry, you are not authorized to use this command.")
+        return
+
+    global MAX_COPIES # Declare intention to modify the global variable
+
+    args = context.args
+    if not args or len(args) != 1:
+        await update.message.reply_text("Usage: /setmaxcopies <number>\nExample: /setmaxcopies 50")
+        return
+
+    try:
+        new_max = int(args[0])
+        if new_max <= 0:
+            await update.message.reply_text("Maximum copies must be a positive number.")
+            return
+        # Optional: Add an upper sanity limit if desired, e.g., 1000
+        # if new_max > 1000:
+        #     await update.message.reply_text("Setting maximum copies above 1000 is not allowed.")
+        #     return
+
+        MAX_COPIES = new_max
+        logger.info(f"User {user.id} set MAX_COPIES to {MAX_COPIES}")
+        await update.message.reply_text(f"Maximum copies per request set to <b>{MAX_COPIES}</b> for this session.", parse_mode='HTML')
+
+    except ValueError:
+        await update.message.reply_text("Invalid number provided. Please enter a whole number.")
+    except Exception as e:
+        logger.error(f"Error setting max copies: {e}")
+        await update.message.reply_text("An error occurred while setting the maximum copies.")
+
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a help message when the /help command is issued."""
     user = update.effective_user
@@ -171,7 +207,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
         "<b>🤖 Bot Commands & Usage:</b>\n\n"
         "👋 /start - Display the welcome message.\n"
-        "❓ /help - Show this help message.\n\n"
+        "❓ /help - Show this help message.\n"
+        "⚙️ /setmaxcopies <number> - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
         "<b>🖨️ Printing:</b>\n"
         "Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a 4x6 label.\n\n"
         "<b>#️⃣ Multiple Copies:</b>\n"
@@ -270,6 +307,7 @@ def main() -> None:
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("setmaxcopies", set_max_copies_command))
 
     # on non command i.e message - handle the image message
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_image))
