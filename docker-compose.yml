@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  telegram-printer-bot:
+    build: .
+    container_name: telegram-printer-bot
+    # Load environment variables from the .env file in the same directory
+    env_file:
+      - .env
+    # Restart the container unless it's manually stopped
+    restart: unless-stopped
+    # Optional: Add volumes if you need persistent storage later
+    # volumes:
+    #   - ./data:/app/data
