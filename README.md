@@ -4,23 +4,23 @@ A Telegram bot that receives images and prints them to a CUPS-managed printer. T
 
 While designed to work with any CUPS-compatible printer, it was developed with the Dymo LabelWriter 4XL (4x6 inch label printer) particularly in mind.
 
-## Features
+## ✨ Features
 
-*   Receives images sent via Telegram.
-*   Resizes images to fit standard 4x6 inch labels (or configurable dimensions).
-*   Prints images to a specified CUPS printer.
-*   Supports printing multiple copies via image caption (e.g., "3 copies").
-*   Restricts usage to allowed Telegram user IDs.
-*   Optional command to set a maximum number of copies per print job.
+*   📥 Receives images sent via Telegram.
+*   📐 Resizes images to fit standard 4x6 inch labels (or configurable dimensions).
+*   🖨️ Prints images to a specified CUPS printer.
+*   🔢 Supports printing multiple copies via image caption (e.g., "3 copies").
+*   🔒 Restricts usage to allowed Telegram user IDs.
+*   ⚙️ Optional command to set a maximum number of copies per print job.
 
-## Setup
+## 🛠️ Setup
 
-1.  **Clone the repository:**
+1.  **Clone the repository:** 📂
     ```bash
     git clone <your-repo-url>
     cd telefax # Or your repository directory name
     ```
-2.  **Configure Environment Variables:**
+2.  **Configure Environment Variables:** 📝
     Copy the `.env.template` file to `.env` and fill in the required values:
     ```bash
     cp .env.template .env
@@ -38,19 +38,19 @@ While designed to work with any CUPS-compatible printer, it was developed with t
     docker-compose up --build -d
     ```
 
-## Usage
+## 🚀 Usage
 
-1.  **Start a chat** with your bot on Telegram.
-2.  **Send an image** to the bot.
+1.  💬 **Start a chat** with your bot on Telegram.
+2.  🖼️ **Send an image** to the bot.
 3.  **(Optional)** Add a caption to the image specifying the number of copies, like `3 copies` or `copies: 5`. If no caption is provided, it defaults to 1 copy.
-4.  The bot will resize the image and send it to the configured CUPS printer.
+4.  🤖 The bot will resize the image and send it to the configured CUPS printer.
 
-### Commands
+### 🤖 Commands
 
-*   `/start`: Displays a welcome message.
-*   `/help`: Shows help information.
-*   `/setmaxcopies <number>`: (Admin only, if configured) Sets the maximum number of copies allowed per print job.
+*   `/start`: Displays a welcome message 👋
+*   `/help`: Shows help information ℹ️
+*   `/setmaxcopies <number>`: (Admin only, if configured) Sets the maximum number of copies allowed per print job 👮
 
-## Contributing
+## 🙌 Contributing
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
