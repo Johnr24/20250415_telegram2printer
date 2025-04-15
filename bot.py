@@ -178,7 +178,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
         "• <code>x3</code> (prints 3 copies)\n"
         "• <code>copies=5</code> (prints 5 copies)\n"
-        f"Any other text in the caption, or no caption, will result in 1 copy being printed. Max copies allowed is {MAX_COPIES}."
+        f"Any other text in the caption, or no caption, will result in 1 copy being printed.\nYou are configured for a maximum of {MAX_COPIES} copies."
     )
     await update.message.reply_html(help_text)
 
