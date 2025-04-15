@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Add any other system dependencies needed by Pillow (e.g., for JPEG, PNG support)
     libjpeg62-turbo \
     libpng16-16 \
-    libtiff5 \
+    libtiff6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file and install Python dependencies
