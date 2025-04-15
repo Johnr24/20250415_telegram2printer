@@ -7,7 +7,7 @@ While designed to work with any CUPS-compatible printer, it was developed with t
 ## ✨ Features
 
 *   📥 Receives images sent via Telegram.
-*   📐 Resizes images to fit standard 4x6 inch labels (or configurable dimensions).
+*   📐 Resizes images to fit configurable label dimensions (defaults to 4x6 inches).
 *   🖨️ Prints images to a specified CUPS printer.
 *   🔢 Supports printing multiple copies via image caption (e.g., "3 copies").
 *   🔒 Restricts usage to allowed Telegram user IDs.
@@ -43,7 +43,7 @@ While designed to work with any CUPS-compatible printer, it was developed with t
 1.  💬 **Start a chat** with your bot on Telegram.
 2.  🖼️ **Send an image** to the bot.
 3.  **(Optional)** Add a caption to the image specifying the number of copies, like `3 copies` or `copies: 5`. If no caption is provided, it defaults to 1 copy.
-4.  🤖 The bot will resize the image and send it to the configured CUPS printer.
+4.  🤖 The bot will resize the image to fit the configured label dimensions (default 4x6 inches) and send it to the configured CUPS printer.
 
 ### 🤖 Commands
 

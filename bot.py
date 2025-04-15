@@ -33,14 +33,29 @@ if MAX_COPIES <= 0:
     logger.warning("MAX_COPIES must be positive. Defaulting to 100.")
     MAX_COPIES = 100
 
+# --- Configurable Constants ---
+try:
+    LABEL_WIDTH_INCHES = float(os.getenv("LABEL_WIDTH_INCHES", 4))
+except ValueError:
+    logger.warning("Invalid LABEL_WIDTH_INCHES value in environment. Defaulting to 4.")
+    LABEL_WIDTH_INCHES = 4
+if LABEL_WIDTH_INCHES <= 0:
+    logger.warning("LABEL_WIDTH_INCHES must be positive. Defaulting to 4.")
+    LABEL_WIDTH_INCHES = 4
 
-# --- Constants ---
-LABEL_WIDTH_INCHES = 4
-LABEL_HEIGHT_INCHES = 6
+try:
+    LABEL_HEIGHT_INCHES = float(os.getenv("LABEL_HEIGHT_INCHES", 6))
+except ValueError:
+    logger.warning("Invalid LABEL_HEIGHT_INCHES value in environment. Defaulting to 6.")
+    LABEL_HEIGHT_INCHES = 6
+if LABEL_HEIGHT_INCHES <= 0:
+    logger.warning("LABEL_HEIGHT_INCHES must be positive. Defaulting to 6.")
+    LABEL_HEIGHT_INCHES = 6
+
 IMAGE_DPI = 300 # Assume standard print resolution
 
 # Calculate pixel dimensions
-LABEL_WIDTH_PX = LABEL_WIDTH_INCHES * IMAGE_DPI
+LABEL_WIDTH_PX = int(LABEL_WIDTH_INCHES * IMAGE_DPI)
 LABEL_HEIGHT_PX = LABEL_HEIGHT_INCHES * IMAGE_DPI
 
 # --- Helper Functions ---
@@ -83,7 +98,11 @@ def print_image_cups(image_buffer, printer_name, copies=1, image_format='png'):
     # Scaling: 'fit-to-page' or 'scaling=100'
     # You might need to experiment with `lpoptions -p <printer_name> -l` on the CUPS server
     # to find the exact options your printer supports.
-    lp_command.extend(["-o", f"media=Custom.{LABEL_WIDTH_INCHES}x{LABEL_HEIGHT_INCHES}in"])
+    # Format dimensions for CUPS - handle potential floats by converting to int/string as needed
+    # CUPS might prefer 'media=Custom.4x6in' or 'media=w101h152mm' depending on driver
+    # Using the Custom.WxHin format seems common.
+    media_option = f"media=Custom.{LABEL_WIDTH_INCHES:.2f}x{LABEL_HEIGHT_INCHES:.2f}in".replace('.00', '') # Format nicely
+    lp_command.extend(["-o", media_option])
     lp_command.extend(["-o", "fit-to-page"]) # Try to scale the image to fit the media
     # lp_command.extend(["-o", "scaling=100"]) # Alternative: print at 100%
 
@@ -211,16 +230,20 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "❓ /help - Show this help message.\n"
         "⚙️ /setmaxcopies &lt;number&gt; - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
         "<b>🖨️ Printing:</b>\n"
-        "Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a 4x6 label.\n\n"
+        "Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a {label_width}x{label_height} inch label.\n\n"
         "<b>#️⃣ Multiple Copies:</b>\n"
         "To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
         "• <code>x3</code> (prints 3 copies)\n"
         "• <code>copies=5</code> (prints 5 copies)\n"
         "Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
-        "<b>⚠️ Max Copies Limit:</b>\nYou are configured for a maximum of <b>{}</b> copies per request."
+        "<b>⚠️ Max Copies Limit:</b>\nYou are configured for a maximum of <b>{max_copies}</b> copies per request."
     )
-    # Format the string with the current MAX_COPIES value
-    formatted_help_text = base_help_text.format(MAX_COPIES)
+    # Format the string with the current values
+    formatted_help_text = base_help_text.format(
+        label_width=LABEL_WIDTH_INCHES,
+        label_height=LABEL_HEIGHT_INCHES,
+        max_copies=MAX_COPIES
+    )
     await update.message.reply_html(formatted_help_text)
 
 
@@ -261,7 +284,7 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = update.message.caption
     copies = parse_copies(caption)
 
-    await update.message.reply_text(f"Received image. Resizing and preparing to print {copies} cop{'y' if copies == 1 else 'ies'}...")
+    await update.message.reply_text(f"Received image. Resizing for {LABEL_WIDTH_INCHES}x{LABEL_HEIGHT_INCHES}in label and preparing to print {copies} cop{'y' if copies == 1 else 'ies'}...")
 
     # Resize the image
     resized_image_buffer, image_format = resize_image(file_bytes)
