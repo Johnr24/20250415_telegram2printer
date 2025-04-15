@@ -17,7 +17,7 @@ While designed to work with any CUPS-compatible printer, it was developed with t
 
 1.  **Clone the repository:** 📂
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/Johnr24/telefax
     cd telefax # Or your repository directory name
     ```
 2.  **Configure Environment Variables:** 📝
