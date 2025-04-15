@@ -61,4 +61,4 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 Additionally, this project is a signatory of the [Pride Flag Covenant](https://github.com/Pride-Flag-Covenant/The-Pride-Flag-Convenant). We stand in solidarity with the LGBTQ+ community. 🏳️‍🌈
 
-This software was written by a LGBTQ+.
+This software was written by a LGBTQ+ Person.
