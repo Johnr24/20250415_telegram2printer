@@ -54,3 +54,7 @@ While designed to work with any CUPS-compatible printer, it was developed with t
 ## 🙌 Contributing
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
+
+## 📜 License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
