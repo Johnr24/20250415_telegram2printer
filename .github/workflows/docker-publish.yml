@@ -1,0 +1,49 @@
+name: Docker Publish to GHCR
+
+on:
+  push:
+    branches: [ main ] # Trigger on pushes to the main branch
+  workflow_dispatch: # Allows manual triggering
+
+env:
+  # Define the image name based on your repository
+  # Converts owner name to lowercase as required by Docker image names
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    # Grant permissions for the workflow to write to GitHub Packages (GHCR)
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          # GITHUB_TOKEN is automatically created by Actions, needs permissions defined above
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: . # Use the current directory as the build context
+          file: ./Dockerfile # Specify the Dockerfile location
+          push: true # Push the image to the registry
+          # Tag the image with 'latest' and the Git SHA
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          # Enable build cache for faster builds (optional but recommended)
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
