@@ -35,6 +35,7 @@ While designed to work with any CUPS-compatible printer, it was developed with t
     *   `LABEL_HEIGHT_INCHES` (Optional): The height of the label in inches. Defaults to 6 if not set.
 
 3.  **Build and Run with Docker Compose:** 🐳
+    ```
     docker-compose up --build -d
     ```
 
