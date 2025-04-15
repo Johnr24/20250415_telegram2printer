@@ -56,7 +56,7 @@ IMAGE_DPI = 300 # Assume standard print resolution
 
 # Calculate pixel dimensions
 LABEL_WIDTH_PX = int(LABEL_WIDTH_INCHES * IMAGE_DPI)
-LABEL_HEIGHT_PX = LABEL_HEIGHT_INCHES * IMAGE_DPI
+LABEL_HEIGHT_PX = int(LABEL_HEIGHT_INCHES * IMAGE_DPI)
 
 # --- Helper Functions ---
 

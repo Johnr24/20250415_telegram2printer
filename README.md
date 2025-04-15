@@ -30,11 +30,11 @@ While designed to work with any CUPS-compatible printer, it was developed with t
     *   `CUPS_PRINTER_NAME`: The name of your printer as configured in CUPS.
     *   `ALLOWED_USER_IDS`: A comma-separated list of Telegram user IDs allowed to use the bot.
     *   `CUPS_SERVER_HOST` (Optional): The hostname or IP address if your CUPS server is running on a different machine than the bot.
-    *   `MAX_COPIES` (Optional): Set a default maximum number of copies allowed per print job. Defaults internally if not set.
+    *   `MAX_COPIES` (Optional): Set a default maximum number of copies allowed per print job. Defaults to 100 if not set.
+    *   `LABEL_WIDTH_INCHES` (Optional): The width of the label in inches. Defaults to 4 if not set.
+    *   `LABEL_HEIGHT_INCHES` (Optional): The height of the label in inches. Defaults to 6 if not set.
 
-3.  **Build and Run with Docker Compose:**
-    This is the recommended way to run the bot.
-    ```bash
+3.  **Build and Run with Docker Compose:** 🐳
     docker-compose up --build -d
     ```
 
