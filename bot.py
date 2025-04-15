@@ -102,19 +102,51 @@ def print_image_cups(image_buffer, printer_name, copies=1, image_format='png'):
         return False, str(e)
 
 def parse_copies(caption):
-    """Parses the number of copies from the caption (e.g., 'x3', 'copies=2'). Defaults to 1."""
+    """Parses the number of copies from the caption.
+    Requires the caption to be exactly 'x<number>' or 'copies=<number>' (case-insensitive, ignoring surrounding whitespace).
+    Defaults to 1 otherwise.
+    """
     if not caption:
         return 1
-    caption = caption.lower()
-    # Simple check for 'x<number>' or 'copies=<number>'
+
+    caption = caption.strip().lower() # Remove whitespace and convert to lower case
+
     import re
-    match = re.search(r'(?:x|\bcopies\s*=\s*)(\d+)', caption)
-    if match:
+
+    # Check for exact match 'x<number>'
+    match_x = re.fullmatch(r'x(\d+)', caption)
+    if match_x:
         try:
-            copies = int(match.group(1))
-            return max(1, copies) # Ensure at least 1 copy
+            copies = int(match_x.group(1))
+            # Add a sanity check for unreasonably large numbers
+            if 1 <= copies <= 100: # Limit copies from 1 to 100
+                return copies
+            else:
+                logger.warning(f"User requested an invalid number of copies ({copies}). Defaulting to 1.")
+                return 1
         except ValueError:
-            pass
+            # This case should ideally not be reached due to \d+
+            logger.error(f"Could not parse number in caption '{caption}' despite regex match.")
+            return 1
+
+    # Check for exact match 'copies=<number>'
+    match_copies = re.fullmatch(r'copies\s*=\s*(\d+)', caption)
+    if match_copies:
+        try:
+            copies = int(match_copies.group(1))
+            # Add a sanity check for unreasonably large numbers
+            if 1 <= copies <= 100: # Limit copies from 1 to 100
+                return copies
+            else:
+                logger.warning(f"User requested an invalid number of copies ({copies}). Defaulting to 1.")
+                return 1
+        except ValueError:
+            # This case should ideally not be reached due to \d+
+            logger.error(f"Could not parse number in caption '{caption}' despite regex match.")
+            return 1
+
+    # If caption is not empty but didn't match the exact formats, default to 1
+    logger.info(f"Caption '{caption}' did not match copy format. Defaulting to 1 copy.")
     return 1
 
 # --- Telegram Bot Handlers ---
@@ -134,10 +166,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>Printing:</b>\n"
         "Simply send an image to the chat. The bot will automatically resize it and print it on a 4x6 label.\n\n"
         "<b>Multiple Copies:</b>\n"
-        "To print multiple copies, add a caption to your image like:\n"
+        "To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
         "• <code>x3</code> (prints 3 copies)\n"
         "• <code>copies=5</code> (prints 5 copies)\n"
-        "If no copy count is specified, it defaults to 1."
+        "Any other text in the caption, or no caption, will result in 1 copy being printed. Max copies allowed is 100."
     )
     await update.message.reply_html(help_text)
 
