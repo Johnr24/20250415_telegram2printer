@@ -24,6 +24,15 @@ CUPS_PRINTER_NAME = os.getenv("CUPS_PRINTER_NAME")
 CUPS_SERVER_HOST = os.getenv("CUPS_SERVER_HOST", None) # Optional: Use if CUPS server is remote
 ALLOWED_USER_IDS = os.getenv("ALLOWED_USER_IDS", "").split(',')
 ALLOWED_USER_IDS = [int(user_id) for user_id in ALLOWED_USER_IDS if user_id.isdigit()] # Convert to list of integers
+try:
+    MAX_COPIES = int(os.getenv("MAX_COPIES", 100))
+except ValueError:
+    logger.warning("Invalid MAX_COPIES value in environment. Defaulting to 100.")
+    MAX_COPIES = 100
+if MAX_COPIES <= 0:
+    logger.warning("MAX_COPIES must be positive. Defaulting to 100.")
+    MAX_COPIES = 100
+
 
 # --- Constants ---
 LABEL_WIDTH_INCHES = 4
@@ -119,10 +128,10 @@ def parse_copies(caption):
         try:
             copies = int(match_x.group(1))
             # Add a sanity check for unreasonably large numbers
-            if 1 <= copies <= 100: # Limit copies from 1 to 100
+            if 1 <= copies <= MAX_COPIES: # Limit copies based on env var
                 return copies
             else:
-                logger.warning(f"User requested an invalid number of copies ({copies}). Defaulting to 1.")
+                logger.warning(f"User requested {copies} copies, which is outside the allowed range (1-{MAX_COPIES}). Defaulting to 1.")
                 return 1
         except ValueError:
             # This case should ideally not be reached due to \d+
@@ -135,10 +144,10 @@ def parse_copies(caption):
         try:
             copies = int(match_copies.group(1))
             # Add a sanity check for unreasonably large numbers
-            if 1 <= copies <= 100: # Limit copies from 1 to 100
+            if 1 <= copies <= MAX_COPIES: # Limit copies based on env var
                 return copies
             else:
-                logger.warning(f"User requested an invalid number of copies ({copies}). Defaulting to 1.")
+                logger.warning(f"User requested {copies} copies, which is outside the allowed range (1-{MAX_COPIES}). Defaulting to 1.")
                 return 1
         except ValueError:
             # This case should ideally not be reached due to \d+
@@ -169,7 +178,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
         "• <code>x3</code> (prints 3 copies)\n"
         "• <code>copies=5</code> (prints 5 copies)\n"
-        "Any other text in the caption, or no caption, will result in 1 copy being printed. Max copies allowed is 100."
+        f"Any other text in the caption, or no caption, will result in 1 copy being printed. Max copies allowed is {MAX_COPIES}."
     )
     await update.message.reply_html(help_text)
 

@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY bot.py .
-COPY .env .
+# Note: .env file is NOT copied. It should be provided at runtime via docker-compose env_file or similar.
 
 # Command to run the bot
 CMD ["python", "bot.py"]
