@@ -2,6 +2,8 @@
 
 A Telegram bot that receives images and prints them to a CUPS-managed printer. Think of it like faxing yourself through Telegram!
 
+While designed to work with any CUPS-compatible printer, it was developed with the Dymo LabelWriter 4XL (4x6 inch label printer) particularly in mind.
+
 ## Features
 
 *   Receives images sent via Telegram.
