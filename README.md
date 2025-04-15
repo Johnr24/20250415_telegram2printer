@@ -58,3 +58,5 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 ## 📜 License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+Additionally, this project is a signatory of the [Pride Flag Covenant](https://github.com/Pride-Flag-Covenant/The-Pride-Flag-Convenant). We stand in solidarity with the LGBTQ+ community. 🏳️‍🌈
