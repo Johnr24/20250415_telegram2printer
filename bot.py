@@ -349,17 +349,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
         f"<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{MAX_COPIES}</b>."
     )
-    # Add rate limiting info only if guest printing is enabled and user is not authorized
-    rate_limit_info = ""
-    if ALLOW_GUEST_PRINTING and not is_authorized:
-        rate_limit_info = (
+
+    # Add guest printing status information
+    guest_status_info = ""
+    if ALLOW_GUEST_PRINTING:
+        guest_status_info = (
             "\n\n"
-            "<b>⏳ Rate Limit:</b>\n"
-            "As a non-authorized user, you can print one image every 7 days."
+            "<b>👤 Guest Printing:</b>\n"
+            "Guest printing is currently <b>enabled</b>. Users not on the authorized list can print one image every 7 days."
+        )
+    else:
+        guest_status_info = (
+            "\n\n"
+            "<b>👤 Guest Printing:</b>\n"
+            "Guest printing is currently <b>disabled</b>. Only authorized users can print."
         )
 
-    # Combine base text and rate limit info
-    help_text_to_send = base_help_text + rate_limit_info
+    # Combine base text and guest status info
+    help_text_to_send = base_help_text + guest_status_info
     await update.message.reply_html(help_text_to_send)
 
 
