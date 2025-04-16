@@ -351,22 +351,37 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     label_width_str = str(LABEL_WIDTH_INCHES).replace('.0', '')
     label_height_str = str(LABEL_HEIGHT_INCHES).replace('.0', '')
 
-    base_help_text = (
-        f"<b>🤖 Bot Commands & Usage:</b>\n\n"
-        f"👋 /start - Display the welcome message.\n"
-        f"❓ /help - Show this help message.\n"
-        f"⚙️ /setmaxcopies &lt;number&gt; - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
-        f"<b>🖨️ Printing:</b>\n"
-        f"Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a {label_width_str}x{label_height_str} inch label.\n\n"
-        f"<b>#️⃣ Multiple Copies:</b>\n"
-        f"To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
-        f"• <code>x3</code> (prints 3 copies)\n"
-        f"• <code>copies=5</code> (prints 5 copies)\n"
-        f"Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
-        f"<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{MAX_COPIES}</b>."
-    )
+    # --- Construct Help Text Based on Authorization ---
+    if is_authorized:
+        # Full help text for authorized users
+        base_help_text = (
+            f"<b>🤖 Bot Commands & Usage:</b>\n\n"
+            f"👋 /start - Display the welcome message.\n"
+            f"❓ /help - Show this help message.\n"
+            f"⚙️ /setmaxcopies &lt;number&gt; - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
+            f"<b>🖨️ Printing:</b>\n"
+            f"Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a {label_width_str}x{label_height_str} inch label.\n\n"
+            f"<b>#️⃣ Multiple Copies:</b>\n"
+            f"To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
+            f"• <code>x3</code> (prints 3 copies)\n"
+            f"• <code>copies=5</code> (prints 5 copies)\n"
+            f"Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
+            f"<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{MAX_COPIES}</b>."
+        )
+        # Guest status is less relevant for authorized users, but we can keep it for consistency or remove if desired.
+        # Let's keep it for now.
+    else:
+        # Simplified help text for non-authorized users
+         base_help_text = (
+            f"<b>🤖 Bot Commands & Usage:</b>\n\n"
+            f"👋 /start - Display the welcome message.\n"
+            f"❓ /help - Show this help message.\n\n"
+            f"<b>🖨️ Printing:</b>\n"
+            f"Simply send an image 🖼️ to the chat. The bot will automatically resize it and print <b>one copy</b> on a {label_width_str}x{label_height_str} inch label."
+            # No mention of /setmaxcopies, multiple copies, or max limit.
+        )
 
-    # Add guest printing status information
+    # --- Add Guest/Rate Limit Info (Applies mostly to non-authorized, but shown to all for now) ---
     guest_status_info = ""
     if ALLOW_GUEST_PRINTING:
         guest_status_info = (
