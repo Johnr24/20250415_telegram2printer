@@ -2,6 +2,8 @@ import logging
 import os
 import tempfile
 import subprocess
+import json
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from dotenv import load_dotenv
 from PIL import Image
@@ -42,6 +44,93 @@ IMAGE_DPI = 300 # Assume standard print resolution
 # Calculate pixel dimensions
 LABEL_WIDTH_PX = LABEL_WIDTH_INCHES * IMAGE_DPI
 LABEL_HEIGHT_PX = LABEL_HEIGHT_INCHES * IMAGE_DPI
+
+# --- Constants for Rate Limiting ---
+PRINT_HISTORY_FILE = "print_history.json"
+UNAUTHORIZED_USER_PRINT_INTERVAL = timedelta(days=7)
+
+# --- Print History Management ---
+print_history = {} # In-memory cache of print history
+
+def load_print_history():
+    """Loads print history from the JSON file."""
+    global print_history
+    try:
+        if os.path.exists(PRINT_HISTORY_FILE):
+            with open(PRINT_HISTORY_FILE, 'r') as f:
+                history_data = json.load(f)
+                # Convert string timestamps back to datetime objects
+                print_history = {
+                    int(user_id): datetime.fromisoformat(ts)
+                    for user_id, ts in history_data.items()
+                }
+                logger.info(f"Loaded print history for {len(print_history)} users from {PRINT_HISTORY_FILE}")
+        else:
+            logger.info(f"{PRINT_HISTORY_FILE} not found. Starting with empty history.")
+            print_history = {}
+    except (json.JSONDecodeError, IOError, ValueError) as e:
+        logger.error(f"Error loading print history from {PRINT_HISTORY_FILE}: {e}. Starting with empty history.")
+        print_history = {} # Reset history on error
+
+def save_print_history():
+    """Saves the current print history to the JSON file."""
+    global print_history
+    try:
+        # Convert datetime objects to ISO format strings for JSON compatibility
+        history_data = {
+            str(user_id): ts.isoformat()
+            for user_id, ts in print_history.items()
+        }
+        with open(PRINT_HISTORY_FILE, 'w') as f:
+            json.dump(history_data, f, indent=4)
+        # logger.debug(f"Saved print history to {PRINT_HISTORY_FILE}") # Optional: debug log
+    except IOError as e:
+        logger.error(f"Error saving print history to {PRINT_HISTORY_FILE}: {e}")
+
+def can_print(user_id: int) -> tuple[bool, str | None]:
+    """Checks if a user is allowed to print.
+    Returns (True, None) if allowed.
+    Returns (False, reason_message) if not allowed.
+    """
+    if ALLOWED_USER_IDS and user_id in ALLOWED_USER_IDS:
+        return True, None # Authorized users can always print
+
+    # Check rate limit for unauthorized users
+    last_print_time = print_history.get(user_id)
+    if last_print_time:
+        time_since_last_print = datetime.now(timezone.utc) - last_print_time
+        if time_since_last_print < UNAUTHORIZED_USER_PRINT_INTERVAL:
+            wait_time = UNAUTHORIZED_USER_PRINT_INTERVAL - time_since_last_print
+            # Format wait time nicely (e.g., "X days, Y hours")
+            days = wait_time.days
+            hours, remainder = divmod(wait_time.seconds, 3600)
+            minutes, _ = divmod(remainder, 60)
+            wait_str = f"{days} day{'s' if days != 1 else ''}" if days > 0 else ""
+            if hours > 0:
+                wait_str += f"{', ' if days > 0 else ''}{hours} hour{'s' if hours != 1 else ''}"
+            if days == 0 and hours == 0 and minutes > 0: # Show minutes if less than an hour
+                 wait_str += f"{minutes} minute{'s' if minutes != 1 else ''}"
+            if not wait_str: # Less than a minute
+                wait_str = "less than a minute"
+
+            reason = f"You have already printed recently. Please wait {wait_str} before printing again."
+            logger.info(f"Rate limit hit for user {user_id}. Time remaining: {wait_time}")
+            return False, reason
+        else:
+            # It's been long enough, they can print again
+            return True, None
+    else:
+        # User not in history, they can print for the first time (or first time since history reset)
+        return True, None
+
+def record_print(user_id: int):
+    """Records a print action for the user and saves history."""
+    global print_history
+    # Use timezone-aware datetime
+    print_history[user_id] = datetime.now(timezone.utc)
+    logger.info(f"Recorded print for user {user_id} at {print_history[user_id]}")
+    save_print_history()
+
 
 # --- Helper Functions ---
 
@@ -163,10 +252,13 @@ def parse_copies(caption):
 async def set_max_copies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Allows authorized users to set the maximum number of copies."""
     user = update.effective_user
+    # --- Authorization Check ---
+    # Only authorized users can change settings
     if ALLOWED_USER_IDS and user.id not in ALLOWED_USER_IDS:
         logger.warning(f"Unauthorized /setmaxcopies attempt by user {user.id} ({user.username})")
         await update.message.reply_text("Sorry, you are not authorized to use this command.")
         return
+    # --- End Authorization Check ---
 
     global MAX_COPIES # Declare intention to modify the global variable
 
@@ -199,12 +291,9 @@ async def set_max_copies_command(update: Update, context: ContextTypes.DEFAULT_T
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a help message when the /help command is issued."""
     user = update.effective_user
-    if ALLOWED_USER_IDS and user.id not in ALLOWED_USER_IDS:
-        logger.warning(f"Unauthorized help access attempt by user {user.id} ({user.username})")
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
-        return
+    is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
 
-    # Define base help text with a placeholder for MAX_COPIES
+    # Define base help text with placeholders
     base_help_text = (
         "<b>🤖 Bot Commands & Usage:</b>\n\n"
         "👋 /start - Display the welcome message.\n"
@@ -217,22 +306,30 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• <code>x3</code> (prints 3 copies)\n"
         "• <code>copies=5</code> (prints 5 copies)\n"
         "Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
-        "<b>⚠️ Max Copies Limit:</b>\nYou are configured for a maximum of <b>{}</b> copies per request."
+        "<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{}</b>."
     )
-    # Format the string with the current MAX_COPIES value
-    formatted_help_text = base_help_text.format(MAX_COPIES)
+    # Add rate limiting info for non-authorized users
+    rate_limit_info = ""
+    if not is_authorized:
+        rate_limit_info = (
+            "\n\n"
+            "<b>⏳ Rate Limit:</b>\n"
+            "As a non-authorized user, you can print one image every 7 days."
+        )
+
+    # Format the string with the current MAX_COPIES value and add rate limit info
+    formatted_help_text = base_help_text.format(MAX_COPIES) + rate_limit_info
     await update.message.reply_html(formatted_help_text)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a welcome message when the /start command is issued."""
     user = update.effective_user
-    if ALLOWED_USER_IDS and user.id not in ALLOWED_USER_IDS:
-        logger.warning(f"Unauthorized access attempt by user {user.id} ({user.username})")
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
-        return
+    # No authorization check here, anyone can start
 
     welcome_message = rf"Hi {user.mention_html()}! Send me an image to print on the label printer."
+
+    # Add printer configuration warning if needed
     if not CUPS_PRINTER_NAME:
         warning_message = "\n\n<b>⚠️ Warning:</b> The printer is not configured. Printing is currently disabled. Please contact the administrator."
         welcome_message += warning_message
@@ -241,14 +338,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_html(welcome_message)
 
 async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles incoming photos, resizes them, and sends them to the printer."""
+    """Handles incoming photos, checks authorization/rate limits, resizes, and prints."""
     user = update.effective_user
-    if ALLOWED_USER_IDS and user.id not in ALLOWED_USER_IDS:
-        logger.warning(f"Unauthorized image received from user {user.id} ({user.username})")
-        await update.message.reply_text("Sorry, you are not authorized to use this bot.")
+
+    # --- Authorization & Rate Limit Check ---
+    is_allowed_to_print, reason = can_print(user.id)
+    if not is_allowed_to_print:
+        logger.warning(f"Print rejected for user {user.id} ({user.username}). Reason: {reason}")
+        await update.message.reply_text(f"Sorry, you cannot print right now. {reason}")
         return
+    # --- End Check ---
 
     if not update.message.photo:
+        # This check might be redundant if the handler only triggers on photos, but good practice.
         await update.message.reply_text("Please send an image file.")
         return
 
@@ -278,10 +380,13 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     success, message = print_image_cups(resized_image_buffer, CUPS_PRINTER_NAME, copies, image_format)
 
     if success:
-        logger.info(f"Successfully sent image to printer {CUPS_PRINTER_NAME} for user {user.id}")
-        await update.message.reply_text(f"Sent to printer! CUPS message: {message}")
+        logger.info(f"Successfully sent image to printer {CUPS_PRINTER_NAME} for user {user.id} ({user.username})")
+        await update.message.reply_text(f"Sent {copies} cop{'y' if copies == 1 else 'ies'} to printer! CUPS message: {message}")
+        # Record the print time only if the user is NOT in the permanently allowed list
+        if not (ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS):
+            record_print(user.id)
     else:
-        logger.error(f"Failed to print image for user {user.id}. Error: {message}")
+        logger.error(f"Failed to print image for user {user.id} ({user.username}). Error: {message}")
         await update.message.reply_text(f"Failed to send to printer. Error: {message}")
 
 
@@ -304,9 +409,12 @@ def main() -> None:
 
     if ALLOWED_USER_IDS:
         logger.info(f"Bot access restricted to user IDs: {ALLOWED_USER_IDS}")
+        logger.info("Other users are allowed 1 print per week.")
     else:
-        logger.warning("ALLOWED_USER_IDS is not set. The bot is open to everyone!")
+        logger.warning("ALLOWED_USER_IDS is not set. The bot is open to everyone (1 print per week limit applies).")
 
+    # Load print history from file
+    load_print_history()
 
     # Create the Application and pass it your bot's token.
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
