@@ -8,5 +8,5 @@ services:
     # Restart the container unless it's manually stopped
     restart: unless-stopped
     # Optional: Add volumes if you need persistent storage later
-    # volumes:
-    #   - ./data:/app/data
+    volumes:
+     - ./data/print_history.json:/app/print_history.json:rw
