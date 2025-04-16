@@ -382,6 +382,15 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Combine base text and guest status info
     help_text_to_send = base_help_text + guest_status_info
+
+    # Add rate limit status for non-authorized users
+    if not is_authorized:
+        can_print_now, reason = can_print(user.id)
+        if not can_print_now and reason and "Please wait" in reason: # Check if rate limited
+             # Append the specific rate limit reason
+             rate_limit_warning = f"\n\n<b>⏳ Status:</b> {reason}"
+             help_text_to_send += rate_limit_warning
+
     await update.message.reply_html(help_text_to_send)
 
 
@@ -397,6 +406,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         warning_message = "\n\n<b>⚠️ Warning:</b> The printer is not configured. Printing is currently disabled. Please contact the administrator."
         welcome_message += warning_message
         logger.warning(f"Informing user {user.id} via /start that printer is not configured.")
+
+    # Add rate limit status for non-authorized users
+    is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
+    if not is_authorized:
+        can_print_now, reason = can_print(user.id)
+        if not can_print_now and reason and "Please wait" in reason: # Check if rate limited
+             # Append the specific rate limit reason
+             rate_limit_warning = f"\n\n<b>⏳ Status:</b> {reason}"
+             welcome_message += rate_limit_warning
 
     await update.message.reply_html(welcome_message)
 
