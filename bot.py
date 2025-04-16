@@ -125,11 +125,16 @@ def can_print(user_id: int) -> tuple[bool, str | None]:
     Returns (True, None) if allowed.
     Returns (False, reason_message) if not allowed.
     """
-    if ALLOWED_USER_IDS and user_id in ALLOWED_USER_IDS:
+    is_authorized = ALLOWED_USER_IDS and user_id in ALLOWED_USER_IDS
+
+    if is_authorized:
         return True, None # Authorized users can always print
 
-    # Check rate limit for unauthorized users
+    # --- Rate Limit Check (applies to all non-authorized users) ---
     last_print_time = print_history.get(user_id)
+    is_rate_limited = False
+    rate_limit_reason = None
+
     if last_print_time:
         time_since_last_print = datetime.now(timezone.utc) - last_print_time
         if time_since_last_print < UNAUTHORIZED_USER_PRINT_INTERVAL:
@@ -146,15 +151,25 @@ def can_print(user_id: int) -> tuple[bool, str | None]:
             if not wait_str: # Less than a minute
                 wait_str = "less than a minute"
 
-            reason = f"You have already printed recently. Please wait {wait_str} before printing again."
-            logger.info(f"Rate limit hit for user {user_id}. Time remaining: {wait_time}")
-            return False, reason
-        else:
-            # It's been long enough, they can print again
-            return True, None
+            rate_limit_reason = f"You have already printed recently. Please wait {wait_str} before printing again."
+            logger.info(f"Rate limit check for user {user_id}: Still within cooldown. Time remaining: {wait_time}")
+            is_rate_limited = True
+        # else: User is outside the cooldown period.
+
+    # --- Guest Printing Logic ---
+    if is_rate_limited:
+        # If rate limited, always return the rate limit reason, regardless of guest setting
+        return False, rate_limit_reason
     else:
-        # User not in history, they can print for the first time (or first time since history reset)
-        return True, None
+        # If not rate limited, check if guest printing is allowed
+        if ALLOW_GUEST_PRINTING:
+            # Guest printing enabled and user is not rate limited -> Allow print
+            return True, None
+        else:
+            # Guest printing disabled and user is not rate limited -> Deny print
+            logger.warning(f"Guest printing disabled. Rejecting print for non-authorized user {user_id} (passed rate limit check).")
+            return False, "Printing is restricted to authorized users only."
+
 
 def record_print(user_id: int):
     """Records a print action for the user and saves history."""
