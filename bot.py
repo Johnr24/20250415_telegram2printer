@@ -34,6 +34,8 @@ except ValueError:
 if MAX_COPIES <= 0:
     logger.warning("MAX_COPIES must be positive. Defaulting to 100.")
     MAX_COPIES = 100
+# Guest printing setting (defaults to True if not set or invalid)
+ALLOW_GUEST_PRINTING = os.getenv("ALLOW_GUEST_PRINTING", "True").lower() in ('true', '1', 'yes')
 
 
 # --- Constants ---
@@ -383,7 +385,9 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"Successfully sent image to printer {CUPS_PRINTER_NAME} for user {user.id} ({user.username})")
         await update.message.reply_text(f"Sent {copies} cop{'y' if copies == 1 else 'ies'} to printer! CUPS message: {message}")
         # Record the print time only if the user is NOT in the permanently allowed list
-        if not (ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS):
+        # and guest printing is enabled (implicitly checked by can_print)
+        is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
+        if ALLOW_GUEST_PRINTING and not is_authorized:
             record_print(user.id)
     else:
         logger.error(f"Failed to print image for user {user.id} ({user.username}). Error: {message}")
