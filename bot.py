@@ -308,9 +308,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
         "<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{}</b>."
     )
-    # Add rate limiting info for non-authorized users
+    # Add rate limiting info only if guest printing is enabled and user is not authorized
     rate_limit_info = ""
-    if not is_authorized:
+    if ALLOW_GUEST_PRINTING and not is_authorized:
         rate_limit_info = (
             "\n\n"
             "<b>⏳ Rate Limit:</b>\n"
@@ -409,12 +409,20 @@ def main() -> None:
 
     if ALLOWED_USER_IDS:
         logger.info(f"Bot access restricted to user IDs: {ALLOWED_USER_IDS}")
-        logger.info("Other users are allowed 1 print per week.")
+        if ALLOW_GUEST_PRINTING:
+            logger.info("Guest printing ENABLED (1 print per week limit applies to non-authorized users).")
+        else:
+            logger.info("Guest printing DISABLED. Only authorized users can print.")
     else:
-        logger.warning("ALLOWED_USER_IDS is not set. The bot is open to everyone (1 print per week limit applies).")
+        if ALLOW_GUEST_PRINTING:
+            logger.warning("ALLOWED_USER_IDS is not set. Bot is open to everyone (1 print per week limit applies).")
+        else:
+            # This state is a bit contradictory - no allowed users, but guest printing off? Log a warning.
+            logger.warning("ALLOWED_USER_IDS is not set AND Guest printing is DISABLED. No one can print!")
 
-    # Load print history from file
-    load_print_history()
+    # Load print history from file (only relevant if guest printing is enabled)
+    if ALLOW_GUEST_PRINTING:
+        load_print_history()
 
     # Create the Application and pass it your bot's token.
     application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
