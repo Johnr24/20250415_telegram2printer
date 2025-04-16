@@ -446,11 +446,26 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_file = await update.message.photo[-1].get_file()
     file_bytes = await photo_file.download_as_bytearray()
 
-    # Parse copies from caption
+    # Determine copies based on authorization
+    is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
     caption = update.message.caption
-    copies = parse_copies(caption)
+    requested_copies = 1 # Default
+    if is_authorized:
+        requested_copies = parse_copies(caption) # Authorized users can request multiple copies
+        copies_to_print = requested_copies
+        copies_message = f"{copies_to_print} cop{'y' if copies_to_print == 1 else 'ies'}"
+    else:
+        # Unauthorized users always print 1 copy
+        copies_to_print = 1
+        requested_copies_parsed = parse_copies(caption) # Check if they tried to request more
+        if requested_copies_parsed > 1:
+            copies_message = f"1 copy (multiple copies ignored for guest users)"
+            logger.info(f"Unauthorized user {user.id} requested {requested_copies_parsed} copies, printing 1.")
+        else:
+            copies_message = "1 copy"
 
-    await update.message.reply_text(f"Received image. Resizing for {LABEL_WIDTH_INCHES}x{LABEL_HEIGHT_INCHES}in label and preparing to print {copies} cop{'y' if copies == 1 else 'ies'}...")
+
+    await update.message.reply_text(f"Received image. Resizing for {LABEL_WIDTH_INCHES}x{LABEL_HEIGHT_INCHES}in label and preparing to print {copies_message}...")
 
     # Resize the image
     resized_image_buffer, image_format = resize_image(file_bytes)
@@ -459,15 +474,15 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Failed to process the image.")
         return
 
-    # Print the image
-    success, message = print_image_cups(resized_image_buffer, CUPS_PRINTER_NAME, copies, image_format)
+    # Print the image using copies_to_print
+    success, message = print_image_cups(resized_image_buffer, CUPS_PRINTER_NAME, copies_to_print, image_format)
 
     if success:
-        logger.info(f"Successfully sent image to printer {CUPS_PRINTER_NAME} for user {user.id} ({user.username})")
-        await update.message.reply_text(f"Sent {copies} cop{'y' if copies == 1 else 'ies'} to printer! CUPS message: {message}")
+        logger.info(f"Successfully sent image to printer {CUPS_PRINTER_NAME} for user {user.id} ({user.username}), copies: {copies_to_print}")
+        await update.message.reply_text(f"Sent {copies_to_print} cop{'y' if copies_to_print == 1 else 'ies'} to printer! CUPS message: {message}")
         # Record the print time only if the user is NOT in the permanently allowed list
         # and guest printing is enabled (implicitly checked by can_print)
-        is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
+        # is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS # Already determined above
         if ALLOW_GUEST_PRINTING and not is_authorized:
             record_print(user.id)
     else:
