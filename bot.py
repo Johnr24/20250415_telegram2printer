@@ -343,6 +343,7 @@ async def set_max_copies_command(update: Update, context: ContextTypes.DEFAULT_T
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a help message when the /help command is issued."""
     user = update.effective_user
+    logger.info(f"User {user.id} ({user.username}) entered /help command.") # DIAGNOSTIC LOG
     is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
 
     # Define base help text using an f-string and escape HTML special chars
@@ -397,6 +398,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sends a welcome message when the /start command is issued."""
     user = update.effective_user
+    logger.info(f"User {user.id} ({user.username}) entered /start command.") # DIAGNOSTIC LOG
     # No authorization check here, anyone can start
 
     welcome_message = rf"Hi {user.mention_html()}! Send me an image to print on the label printer."
