@@ -8,7 +8,7 @@ on:
 env:
   # Define the image name based on your repository
   # Converts owner name to lowercase as required by Docker image names
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   build-and-push:
