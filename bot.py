@@ -330,20 +330,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS
 
-    # Define base help text with placeholders
+    # Define base help text using an f-string and escape HTML special chars
+    # Use .replace('.0', '') for cleaner display if width/height are whole numbers
+    label_width_str = str(LABEL_WIDTH_INCHES).replace('.0', '')
+    label_height_str = str(LABEL_HEIGHT_INCHES).replace('.0', '')
+
     base_help_text = (
-        "<b>🤖 Bot Commands & Usage:</b>\n\n"
-        "👋 /start - Display the welcome message.\n"
-        "❓ /help - Show this help message.\n"
-        "⚙️ /setmaxcopies &lt;number&gt; - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
-        "<b>🖨️ Printing:</b>\n"
-        "Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a {label_width}x{label_height} inch label.\n\n"
-        "<b>#️⃣ Multiple Copies:</b>\n"
-        "To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
-        "• <code>x3</code> (prints 3 copies)\n"
-        "• <code>copies=5</code> (prints 5 copies)\n"
-        "Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
-        "<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{}</b>."
+        f"<b>🤖 Bot Commands & Usage:</b>\n\n"
+        f"👋 /start - Display the welcome message.\n"
+        f"❓ /help - Show this help message.\n"
+        f"⚙️ /setmaxcopies &lt;number&gt; - Set the max copies allowed per print (e.g., <code>/setmaxcopies 50</code>). (Authorized users only)\n\n"
+        f"<b>🖨️ Printing:</b>\n"
+        f"Simply send an image 🖼️ to the chat. The bot will automatically resize it and print it on a {label_width_str}x{label_height_str} inch label.\n\n"
+        f"<b>#️⃣ Multiple Copies:</b>\n"
+        f"To print multiple copies, the image caption must contain <b>only</b> the copy specifier (case-insensitive, ignoring surrounding whitespace):\n"
+        f"• <code>x3</code> (prints 3 copies)\n"
+        f"• <code>copies=5</code> (prints 5 copies)\n"
+        f"Any other text in the caption, or no caption, will result in 1 copy being printed.\n\n"
+        f"<b>⚠️ Max Copies Limit:</b>\nThe maximum number of copies per request is currently <b>{MAX_COPIES}</b>."
     )
     # Add rate limiting info only if guest printing is enabled and user is not authorized
     rate_limit_info = ""
@@ -354,9 +358,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "As a non-authorized user, you can print one image every 7 days."
         )
 
-    # Format the string with the current MAX_COPIES value and add rate limit info
-    formatted_help_text = base_help_text.format(MAX_COPIES) + rate_limit_info
-    await update.message.reply_html(formatted_help_text)
+    # Combine base text and rate limit info
+    help_text_to_send = base_help_text + rate_limit_info
+    await update.message.reply_html(help_text_to_send)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
