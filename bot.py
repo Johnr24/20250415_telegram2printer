@@ -92,11 +92,23 @@ def load_print_history():
         if os.path.exists(PRINT_HISTORY_FILE):
             with open(PRINT_HISTORY_FILE, 'r') as f:
                 history_data = json.load(f)
-                # Convert string timestamps back to datetime objects
-                print_history = {
-                    int(user_id): datetime.fromisoformat(ts)
-                    for user_id, ts in history_data.items()
-                }
+                loaded_history = {}
+                for user_id_str, data in history_data.items():
+                    try:
+                        user_id = int(user_id_str)
+                        if isinstance(data, dict): # New format
+                            last_print = datetime.fromisoformat(data.get("last_print", ""))
+                            username = data.get("username", "Unknown")
+                            loaded_history[user_id] = {"last_print": last_print, "username": username}
+                        elif isinstance(data, str): # Old format (just timestamp)
+                            last_print = datetime.fromisoformat(data)
+                            loaded_history[user_id] = {"last_print": last_print, "username": "Unknown"}
+                        else:
+                             logger.warning(f"Skipping invalid data type for user {user_id_str} in history file.")
+                    except (ValueError, TypeError) as parse_err:
+                        logger.warning(f"Skipping entry for user {user_id_str} due to parsing error: {parse_err}")
+
+                print_history = loaded_history
                 logger.info(f"Loaded print history for {len(print_history)} users from {PRINT_HISTORY_FILE}")
         else:
             logger.info(f"{PRINT_HISTORY_FILE} not found. Starting with empty history.")
@@ -109,13 +121,16 @@ def save_print_history():
     """Saves the current print history to the JSON file."""
     global print_history
     try:
-        # Convert datetime objects to ISO format strings for JSON compatibility
-        history_data = {
-            str(user_id): ts.isoformat()
-            for user_id, ts in print_history.items()
-        }
+        # Convert history data to JSON serializable format
+        history_data_to_save = {}
+        for user_id, data in print_history.items():
+            history_data_to_save[str(user_id)] = {
+                "last_print": data["last_print"].isoformat(),
+                "username": data.get("username", "Unknown") # Ensure username exists
+            }
+
         with open(PRINT_HISTORY_FILE, 'w') as f:
-            json.dump(history_data, f, indent=4)
+            json.dump(history_data_to_save, f, indent=4)
         # logger.debug(f"Saved print history to {PRINT_HISTORY_FILE}") # Optional: debug log
     except IOError as e:
         logger.error(f"Error saving print history to {PRINT_HISTORY_FILE}: {e}")
@@ -131,7 +146,8 @@ def can_print(user_id: int) -> tuple[bool, str | None]:
         return True, None # Authorized users can always print
 
     # --- Rate Limit Check (applies to all non-authorized users) ---
-    last_print_time = print_history.get(user_id)
+    user_data = print_history.get(user_id)
+    last_print_time = user_data.get("last_print") if user_data else None
     is_rate_limited = False
     rate_limit_reason = None
 
@@ -171,12 +187,13 @@ def can_print(user_id: int) -> tuple[bool, str | None]:
             return False, "Printing is restricted to authorized users only."
 
 
-def record_print(user_id: int):
-    """Records a print action for the user and saves history."""
+def record_print(user_id: int, username: str | None):
+    """Records a print action for the user (including username) and saves history."""
     global print_history
-    # Use timezone-aware datetime
-    print_history[user_id] = datetime.now(timezone.utc)
-    logger.info(f"Recorded print for user {user_id} at {print_history[user_id]}")
+    now = datetime.now(timezone.utc)
+    user_display_name = username or "Unknown" # Use "Unknown" if username is None
+    print_history[user_id] = {"last_print": now, "username": user_display_name}
+    logger.info(f"Recorded print for user {user_id} ({user_display_name}) at {now}")
     save_print_history()
 
 
@@ -499,7 +516,8 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # and guest printing is enabled (implicitly checked by can_print)
         # is_authorized = ALLOWED_USER_IDS and user.id in ALLOWED_USER_IDS # Already determined above
         if ALLOW_GUEST_PRINTING and not is_authorized:
-            record_print(user.id)
+            # Pass user ID and username to record_print
+            record_print(user.id, user.username)
     else:
         logger.error(f"Failed to print image for user {user.id} ({user.username}). Error: {message}")
         await update.message.reply_text(f"Failed to send to printer. Error: {message}")
